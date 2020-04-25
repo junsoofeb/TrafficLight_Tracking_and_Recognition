@@ -69,7 +69,7 @@ def find_candidate(img):
     copy_img = img.copy()
     _, green, red = color_detect(img)
 
-    # 첫 이미지가 빨간불이라면,
+    ##### 첫 이미지가 빨간불이라면,
     gray = cv.cvtColor(red, cv.COLOR_BGR2GRAY)
     blur = cv.bilateralFilter(gray, 5, 75, 75)
     canny = cv.Canny(blur, 50, 150)
@@ -105,7 +105,51 @@ def find_candidate(img):
             candidate = copy_img[my : MY , mx  : MX ]
             candidates.append(candidate)
             locations.append((mx, my, MX, MY))
+            
+            
+    ##### 첫 이미지가 초록불이라면,
+    if len(candidates) == 0:
+        gray = cv.cvtColor(green, cv.COLOR_BGR2GRAY)
+        blur = cv.bilateralFilter(gray, 5, 75, 75)
+        canny = cv.Canny(blur, 50, 150)
+        #show(canny)
+
+        kernel = np.ones((10, 10), np.uint8)    
+        result = cv.morphologyEx(canny, cv.MORPH_DILATE, kernel)
+        #show(result)    
         
+        cnts = cv.findContours(result, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)[0]
+        for j in range(len(cnts)):
+            cnt = cnts[j]
+            rect = cv.minAreaRect(cnt)
+            box = cv.boxPoints(rect)
+            box = np.int0(box)        
+
+            min_x = min(box[:, 0])
+            max_x = max(box[:, 0])
+            min_y = min(box[:, 1])
+            max_y = max(box[:, 1])
+
+            garo = max_x - min_x
+            sero = max_y - min_y
+
+            ratio = garo / sero
+            # 넓이, 가로 길이, 세로길이, 종횡비
+
+            # ratio가 1에 가까워야 후보로 설정
+            if ratio < 1.2 and ratio > 0.8:
+                #cv.drawContours(copy, [box], -1, (255, 0, 0), 4)
+                #print("ratio :", ratio)
+                mx, my, MX, MY = min_x - 10, min_y - 20, max_x + 10, max_y + 40
+                candidate = copy_img[my : MY , mx  : MX ]
+                candidates.append(candidate)
+                locations.append((mx, my, MX, MY))
+        
+
+    if len(candidates) == 0:
+        print("candidate ERROR!")
+        sys.exit()
+    
     #show(copy)
 
     return candidates, locations
